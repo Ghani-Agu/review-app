@@ -1,20 +1,28 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
+// prisma/schema.prisma
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-enum ReviewStatus {
-  pending
-  approved
-  rejected
+generator client {
+  provider = "prisma-client-js"
 }
 
+/* Shopify app sessions (required by @shopify/shopify-app-session-storage-prisma) */
+model Session {
+  id          String   @id
+  shop        String
+  state       String
+  isOnline    Boolean
+  scope       String?
+  expires     DateTime?
+  accessToken String?
+  userId      BigInt?
+}
+
+/* Your reviews table (example – keep what you already have) */
 model Review {
-  id            String        @id @default(uuid())
+  id            String   @id @default(cuid())
   shopDomain    String
   productId     BigInt
   productHandle String?
@@ -23,9 +31,12 @@ model Review {
   body          String
   authorName    String
   authorEmail   String?
-  status        ReviewStatus  @default(pending)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  status        ReviewStatus
+  createdAt     DateTime @default(now())
+}
 
-  @@index([shopDomain, productId, status], name: "reviews_shop_product_status_idx")
+enum ReviewStatus {
+  pending
+  approved
+  rejected
 }
