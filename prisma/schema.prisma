@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+}
+
+model Review {
+  id            String        @id @default(uuid())
+  shopDomain    String
+  productId     BigInt
+  productHandle String?
+  rating        Int
+  title         String?
+  body          String
+  authorName    String
+  authorEmail   String?
+  status        ReviewStatus  @default(pending)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([shopDomain, productId, status], name: "reviews_shop_product_status_idx")
+}
