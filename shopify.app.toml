@@ -1,8 +1,8 @@
-# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+# shopify.app.toml
 
 client_id = "f0f95783e7e83196033adcb1d71cd52e"
 name = "ReviewForge"
-application_url = "https://example.com"
+application_url = "https://review-app-seven-gamma.vercel.app"
 embedded = true
 
 [build]
@@ -24,9 +24,10 @@ api_version = "2025-10"
 scopes = "read_products,write_products,read_metaobjects,write_metaobjects"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://review-app-seven-gamma.vercel.app/api/auth" ]
 
 [app_proxy]
-url = "/api/proxy/reviews"
+# IMPORTANT: This must be the *base* proxy URL, not the full /reviews path.
+url = "https://review-app-seven-gamma.vercel.app/api/proxy"
 prefix = "apps"
 subpath = "reviews"
