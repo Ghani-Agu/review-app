@@ -18,7 +18,17 @@ model Session {
   expires     DateTime?
   accessToken String?
   userId      BigInt?
+
+  // Added fields for Shopify v7+
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean?
+  locale        String?
+  collaborator  Boolean?
+  emailVerified Boolean?
 }
+
 
 /* Your reviews table (example – keep what you already have) */
 model Review {
