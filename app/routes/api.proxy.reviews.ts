@@ -28,6 +28,21 @@ function safeJson<T>(data: T, init?: ResponseInit) {
   );
 }
 
+/** CORS preflight handler */
+function handleOptions(request: Request) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      },
+    });
+  }
+  return null;
+}
+
 /** Try to resolve the shop domain from header, query, or hostname */
 function getShopFromRequest(request: Request): string | undefined {
   const hdr = request.headers.get("x-shopify-shop-domain");
@@ -43,7 +58,6 @@ function getShopFromRequest(request: Request): string | undefined {
     request.headers.get("host") ||
     url.host;
 
-  // If it looks like a myshopify domain, accept it
   if (host && /\.myshopify\.com$/i.test(host)) return host;
 
   return undefined;
@@ -53,18 +67,27 @@ function getShopFromRequest(request: Request): string | undefined {
  * GET /apps/<proxy>/reviews?product_id=...&status=approved
  */
 export async function loader({ request }: { request: Request }) {
+  const maybeCors = handleOptions(request);
+  if (maybeCors) return maybeCors;
+
   try {
     const shop = getShopFromRequest(request);
     if (!shop) {
       return safeJson(
-        { ok: false, error: "Missing shop. Ensure you call via the App Proxy (/apps/<subpath>) or add ?shop=<domain>." },
+        {
+          ok: false,
+          error:
+            "Missing shop. Ensure you call via the App Proxy (/apps/<subpath>) or add ?shop=<domain>.",
+        },
         { status: 401 }
       );
     }
 
     const url = new URL(request.url);
     const productIdRaw =
-      url.searchParams.get("product_id") ?? url.searchParams.get("productId") ?? "";
+      url.searchParams.get("product_id") ??
+      url.searchParams.get("productId") ??
+      "";
     if (!productIdRaw) {
       return safeJson({ ok: false, error: "Missing product_id" }, { status: 400 });
     }
@@ -98,16 +121,11 @@ export async function loader({ request }: { request: Request }) {
 
 /**
  * POST /apps/<proxy>/reviews
- * Accepts (JSON or form):
- * - product_id | productId : string (required, numeric ID)
- * - rating                 : number 1–5 (required)
- * - title                  : string (optional)
- * - body  | review         : string (required)
- * - author_name            : string (required)
- * - author_email           : string (optional)
- * - product_handle         : string (optional)
  */
 export async function action({ request }: { request: Request }) {
+  const maybeCors = handleOptions(request);
+  if (maybeCors) return maybeCors;
+
   if (request.method !== "POST") {
     return safeJson({ ok: false, error: "Method not allowed" }, { status: 405 });
   }
@@ -116,7 +134,11 @@ export async function action({ request }: { request: Request }) {
     const shop = getShopFromRequest(request);
     if (!shop) {
       return safeJson(
-        { ok: false, error: "Missing shop. Ensure you post to the App Proxy (/apps/<subpath>) or add ?shop=<domain>." },
+        {
+          ok: false,
+          error:
+            "Missing shop. Ensure you post to the App Proxy (/apps/<subpath>) or add ?shop=<domain>.",
+        },
         { status: 401 }
       );
     }
@@ -137,7 +159,6 @@ export async function action({ request }: { request: Request }) {
     const authorEmail = body.author_email ? String(body.author_email) : null;
     const productHandle = body.product_handle ? String(body.product_handle) : null;
 
-    // Validate
     if (!productIdRaw) {
       return safeJson({ ok: false, error: "product_id is required" }, { status: 400 });
     }
@@ -150,10 +171,16 @@ export async function action({ request }: { request: Request }) {
 
     const rating = Number(ratingRaw);
     if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
-      return safeJson({ ok: false, error: "rating must be between 1 and 5" }, { status: 400 });
+      return safeJson(
+        { ok: false, error: "rating must be between 1 and 5" },
+        { status: 400 }
+      );
     }
     if (!authorName || !text) {
-      return safeJson({ ok: false, error: "author_name and body are required" }, { status: 400 });
+      return safeJson(
+        { ok: false, error: "author_name and body are required" },
+        { status: 400 }
+      );
     }
 
     const created = await prisma.review.create({
